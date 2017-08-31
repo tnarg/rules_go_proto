@@ -1,0 +1,1 @@
+exports_files(["redoc.tpl", "index.tpl"])

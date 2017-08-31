@@ -1,0 +1,24 @@
+# Hack derived from https://github.com/bazelbuild/rules_go/issues/248
+load("@com_github_tnarg_rules_go_proto//go_proto:rules.bzl", "go_proto_library")
+
+filegroup(
+    name = "protos",
+    srcs = [
+        "annotations.proto",
+        "http.proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "go_default_library",
+    importpath = "google.golang.org/genproto/googleapis/api/annotations",
+    srcs = [
+        "annotations.proto",
+        "http.proto",
+    ],
+    deps = [
+        "@com_github_tnarg_rules_go_proto//google/protobuf:go_default_library"
+    ],
+    visibility = ["//visibility:public"],
+)
