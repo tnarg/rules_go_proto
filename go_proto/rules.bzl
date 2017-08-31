@@ -71,6 +71,7 @@ def _proto_gen_impl(ctx):
         ctx.executable.protoc.path,
         "--go_out=%s%s:%s" % (plugins, ",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
         "-I.",
+        "-Iexternal/com_github_tnarg_rules_go_proto/",
         "-I%s/../.." % (ctx.files.well_known_protos[0].dirname,),
     ] + [src.path for src in ctx.files.srcs])
 
@@ -143,6 +144,7 @@ def _grpc_gateway_gen_impl(ctx):
         ctx.executable.protoc.path,
         "--grpc-gateway_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
         "-I.",
+        "-Iexternal/com_github_tnarg_rules_go_proto/",
         "-I%s/../.." % (ctx.files.well_known_protos[0].dirname,),
         ] + [src.path for src in ctx.files.srcs])
 
@@ -196,6 +198,7 @@ def _swagger_gen_impl(ctx):
         ctx.executable.protoc.path,
         "--swagger_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
         "-I.",
+        "-Iexternal/com_github_tnarg_rules_go_proto/",
         "-I%s/../.." % (ctx.files.well_known_protos[0].dirname,),
         ] + [src.path for src in ctx.files.srcs])
 
