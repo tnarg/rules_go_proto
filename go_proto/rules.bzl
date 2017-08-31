@@ -402,6 +402,12 @@ def go_proto_library(
 
 def go_grpc_repositories():
     go_repository(
+        name = "com_github_golang_protobuf",
+        importpath = "github.com/golang/protobuf",
+        commit = "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
+    )
+
+    go_repository(
         name = "com_github_grpc_ecosystem_grpc_gateway",
         importpath = "github.com/grpc-ecosystem/grpc-gateway",
         commit = "f2862b476edcef83412c7af8687c9cd8e4097c0f",
