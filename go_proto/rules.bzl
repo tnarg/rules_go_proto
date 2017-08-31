@@ -14,7 +14,7 @@ _common_attrs = {
         cfg = "host",
     ),
     "well_known_protos": attr.label(
-        default = Label("@io_bazel_rules_go//:go_google_protobuf")
+        default = Label("@com_github_google_protobuf//:well_known_protos")
     ),
     "outs": attr.output_list(mandatory = True),
 }
@@ -38,14 +38,29 @@ WELL_KNOWN_M_IMPORTS = [
     "Mgoogle/protobuf/wrappers.proto=github.com/golang/protobuf/ptypes/wrappers",
 ]
 
+def _safe_proto_path(proto_path):
+    if proto_path == "":
+        return "."
+    else:
+        return proto_path
+
 def _proto_gen_impl(ctx):
     plugins = "plugins=grpc," if ctx.attr.with_grpc else ""
+
+    proto_paths = dict()
+    proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
 
     m_imports = []
     dep_protos = []
     for dep in ctx.attr.deps:
         dep_protos += dep.protos
         m_imports += dep.m_exports
+        proto_paths[_safe_proto_path(dep.label.workspace_root)] = None
+
+    proto_path_args = []
+    for proto_path in proto_paths:
+        proto_path_args += ["-I" + proto_path]
 
     inputs = (ctx.files.srcs +
               dep_protos +
@@ -70,13 +85,9 @@ def _proto_gen_impl(ctx):
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
         "--go_out=%s%s:%s" % (plugins, ",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
-        "-I.",
-        "-Iexternal/com_github_tnarg_rules_go_proto/",
-        "-I%s/../.." % (ctx.files.well_known_protos[0].dirname,),
-    ] + [src.path for src in ctx.files.srcs])
+    ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     cmd = protoc_cmd + ";" + ";".join(rename_cmds)
-
     ctx.action(
         inputs = inputs,
         outputs = outputs,
@@ -118,11 +129,20 @@ _proto_gen = rule(
 )
 
 def _grpc_gateway_gen_impl(ctx):
+    proto_paths = dict()
+    proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
+
     m_imports = []
     dep_protos = []
     for dep in ctx.attr.deps:
         dep_protos += dep.protos
         m_imports += dep.m_exports
+        proto_paths[_safe_proto_path(dep.label.workspace_root)] = None
+
+    proto_path_args = []
+    for proto_path in proto_paths:
+        proto_path_args += ["-I" + proto_path]
 
     inputs = (ctx.files.srcs +
               dep_protos +
@@ -131,24 +151,15 @@ def _grpc_gateway_gen_impl(ctx):
               ctx.files.well_known_protos)
 
     outputs = []
-    #rename_cmds = []
     for src in ctx.files.srcs:
         fname = src.basename[:-len(".proto")] + ".pb.gw.go"
         out = ctx.new_file(ctx.genfiles_dir, fname)
         outputs += [out]
 
-        #if ctx.attr.importpath:
-        #    rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, fname, out.path)]
-
-    protoc_cmd = " ".join([
+    cmd = " ".join([
         ctx.executable.protoc.path,
         "--grpc-gateway_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
-        "-I.",
-        "-Iexternal/com_github_tnarg_rules_go_proto/",
-        "-I%s/../.." % (ctx.files.well_known_protos[0].dirname,),
-        ] + [src.path for src in ctx.files.srcs])
-
-    cmd = protoc_cmd #+ ";" + ";".join(rename_cmds)
+    ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     ctx.action(
         inputs = inputs,
@@ -172,11 +183,20 @@ _grpc_gateway_gen = rule(
 )
 
 def _swagger_gen_impl(ctx):
+    proto_paths = dict()
+    proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
+
     m_imports = []
     dep_protos = []
     for dep in ctx.attr.deps:
         dep_protos += dep.protos
         m_imports += dep.m_exports
+        proto_paths[_safe_proto_path(dep.label.workspace_root)] = None
+
+    proto_path_args = []
+    for proto_path in proto_paths:
+        proto_path_args += ["-I" + proto_path]
 
     inputs = (ctx.files.srcs +
               dep_protos +
@@ -185,24 +205,15 @@ def _swagger_gen_impl(ctx):
               ctx.files.well_known_protos)
 
     outputs = []
-    #rename_cmds = []
     for src in ctx.files.srcs:
         fname = src.basename[:-len(".proto")] + ".swagger.json"
         out = ctx.new_file(ctx.genfiles_dir, fname)
         outputs += [out]
 
-        #if ctx.attr.importpath:
-        #    rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, fname, out.path)]
-
-    protoc_cmd = " ".join([
+    cmd = " ".join([
         ctx.executable.protoc.path,
         "--swagger_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
-        "-I.",
-        "-Iexternal/com_github_tnarg_rules_go_proto/",
-        "-I%s/../.." % (ctx.files.well_known_protos[0].dirname,),
-        ] + [src.path for src in ctx.files.srcs])
-
-    cmd = protoc_cmd #+ ";" + ";".join(rename_cmds)
+    ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     ctx.action(
         inputs = inputs,
