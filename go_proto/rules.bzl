@@ -414,57 +414,39 @@ def go_proto_library(
         visibility = visibility,
     )
 
+_go_grpc_repositories = {
+    "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
+    "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
+    "github.com/google/protobuf":             "6699f2cf64c656d96f4d6f93fa9563faf02e94b4",
+    "github.com/grpc-ecosystem/grpc-gateway": "f2862b476edcef83412c7af8687c9cd8e4097c0f",
+    "github.com/jteeuwen/go-bindata":         "a0ff2567cfb70903282db057e799fd826784d41d",
+    "golang.org/x/net":                       "5961165da77ad3a2abf3a77ea904c13a76b0b073",
+    "golang.org/x/text":                      "e113a52b01bdd1744681b6ce70c2e3d26b58d389",
+    "google.golang.org/genproto":             "411e09b969b1170a9f0c467558eb4c4c110d9c77",
+    "google.golang.org/grpc":                 "7db1564ba1229bc42919bb1f6d9c4186f3aa8678",
+}
+
 def go_grpc_repositories():
-    go_repository(
-        name = "com_github_golang_glog",
-        importpath = "github.com/golang/glog",
-        commit = "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
-    )
+    for importpath, commit in _go_grpc_repositories.items():
+        _maybe_go_repository(importpath, commit)
 
-    go_repository(
-        name = "com_github_google_protobuf",
-        importpath = "github.com/google/protobuf",
-        commit = "6699f2cf64c656d96f4d6f93fa9563faf02e94b4",
-    )
+def _go_repository_name(importpath):
+    a, b = importpath.split('/', 1)
+    host_parts = a.split('.')
 
-    go_repository(
-        name = "org_golang_x_net",
-        importpath = "golang.org/x/net",
-        commit = "5961165da77ad3a2abf3a77ea904c13a76b0b073",
-    )
+    result = []
+    for i in range(len(host_parts)):
+        result.append(host_parts.pop())
 
-    go_repository(
-        name = "org_golang_x_text",
-        importpath = "golang.org/x/text",
-        commit = "e113a52b01bdd1744681b6ce70c2e3d26b58d389",
-    )
+    result.append(b.replace('-', '_').replace('/', '_').replace('.', '_'))
 
-    go_repository(
-        name = "com_github_golang_protobuf",
-        importpath = "github.com/golang/protobuf",
-        commit = "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
-    )
+    return "_".join(result)
 
-    go_repository(
-        name = "com_github_grpc_ecosystem_grpc_gateway",
-        importpath = "github.com/grpc-ecosystem/grpc-gateway",
-        commit = "f2862b476edcef83412c7af8687c9cd8e4097c0f",
-    )
-
-    go_repository(
-        name = "org_golang_google_genproto",
-        importpath = "google.golang.org/genproto",
-        commit = "411e09b969b1170a9f0c467558eb4c4c110d9c77",
-    )
-
-    go_repository(
-        name = "org_golang_google_grpc",
-        importpath = "google.golang.org/grpc",
-        commit = "7db1564ba1229bc42919bb1f6d9c4186f3aa8678",
-    )
-
-    go_repository(
-        name = "com_github_jteeuwen_go_bindata",
-        importpath = "github.com/jteeuwen/go-bindata",
-        commit = "a0ff2567cfb70903282db057e799fd826784d41d",
-    )
+def _maybe_go_repository(importpath, commit):
+    name = _go_repository_name(importpath)
+    if name not in native.existing_rules():
+        go_repository(
+            name=name,
+            importpath=importpath,
+            commit=commit,
+        )
