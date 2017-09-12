@@ -96,7 +96,7 @@ def _proto_gen_impl(ctx):
 
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
-        "--gogofast_out=%s%s:%s" % (plugins, ",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
+        "--gogo%s_out=%s%s:%s" % (ctx.attr.mode, plugins, ",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     cmd = protoc_cmd + ";" + ";".join(rename_cmds)
@@ -121,6 +121,10 @@ def _proto_gen_impl(ctx):
 
 _proto_gen = rule(
     attrs = _common_attrs + {
+        "mode": attr.string(
+            default = "fast",
+            mandatory = True,
+        ),
         "protoc_gen_gogofast": attr.label(
             default = Label("@com_github_gogo_protobuf//protoc-gen-gogofast"),
             allow_files = True,
@@ -343,8 +347,9 @@ _bindata_gen = rule(
     implementation = _bindata_impl,
 )
 
-def go_proto_library(
+def gogo_proto_library(
         name,
+        mode = "fast",
         srcs = None,
         importpath = None,
         package = None,
@@ -356,6 +361,8 @@ def go_proto_library(
         with_swagger = False):
     if not name:
         fail("name is required", "name")
+    if mode not in ["fast", "faster", "slick"]:
+        fail("mode must be \"fast\", \"faster\", or \"slick\"", "mode")
     if not srcs:
         fail("srcs required", "srcs")
     if not deps:
@@ -373,6 +380,7 @@ def go_proto_library(
     proto_name = name + "_proto"
     _proto_gen(
         name = proto_name,
+        mode = mode,
         srcs = srcs,
         deps = proto_deps,
         importpath = importpath,
@@ -449,7 +457,7 @@ def go_proto_library(
         visibility = visibility,
     )
 
-_go_grpc_repositories = {
+_gogo_repositories = {
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
     "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
@@ -462,8 +470,8 @@ _go_grpc_repositories = {
     "google.golang.org/grpc":                 "7db1564ba1229bc42919bb1f6d9c4186f3aa8678",
 }
 
-def go_grpc_repositories():
-    for importpath, commit in _go_grpc_repositories.items():
+def gogo_repositories():
+    for importpath, commit in _gogo_repositories.items():
         _maybe_go_repository(importpath, commit)
 
 def _go_repository_name(importpath):
