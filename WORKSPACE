@@ -1,4 +1,4 @@
-workspace(name="com_github_tnarg_rules_go_proto")
+workspace(name="com_github_tnarg_rules_gogo_proto")
 
 git_repository(
     name = "io_bazel_rules_go",
