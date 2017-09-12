@@ -16,20 +16,28 @@ _common_attrs = {
     "well_known_protos": attr.label(
         default = Label("@com_github_google_protobuf//:well_known_protos")
     ),
+    "well_known_gogoprotos": attr.label(
+        default = Label("//:gogoproto/gogo.proto"),
+        allow_files = True,
+    ),
     "outs": attr.output_list(mandatory = True),
 }
 
 WELL_KNOWN_DEPS = [
+    "@com_github_gogo_protobuf//gogoproto:go_default_library",
+    "@com_github_gogo_protobuf//proto:go_default_library",
+    "@com_github_gogo_protobuf//types:go_default_library",
+    "@com_github_golang_protobuf//proto:go_default_library",
     "@com_github_golang_protobuf//ptypes/any:go_default_library",
     "@com_github_golang_protobuf//ptypes/duration:go_default_library",
     "@com_github_golang_protobuf//ptypes/empty:go_default_library",
     "@com_github_golang_protobuf//ptypes/struct:go_default_library",
     "@com_github_golang_protobuf//ptypes/timestamp:go_default_library",
     "@com_github_golang_protobuf//ptypes/wrappers:go_default_library",
-    "@com_github_golang_protobuf//proto:go_default_library",
 ]
 
 WELL_KNOWN_M_IMPORTS = [
+    "Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto",
     "Mgoogle/protobuf/any.proto=github.com/golang/protobuf/ptypes/any",
     "Mgoogle/protobuf/duration.proto=github.com/golang/protobuf/ptypes/duration",
     "Mgoogle/protobuf/empty.proto=github.com/golang/protobuf/ptypes/empty",
@@ -50,6 +58,7 @@ def _proto_gen_impl(ctx):
     proto_paths = dict()
     proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
     proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
+    proto_paths[_safe_proto_path(ctx.attr.well_known_gogoprotos.label.workspace_root)] = None
 
     m_imports = []
     dep_protos = []
@@ -65,8 +74,11 @@ def _proto_gen_impl(ctx):
     inputs = (ctx.files.srcs +
               dep_protos +
               [ctx.executable.protoc] +
-              ctx.files.protoc_gen_go +
-              ctx.files.well_known_protos)
+              ctx.files.protoc_gen_gogofast +
+              ctx.files.protoc_gen_gogofaster +
+              ctx.files.protoc_gen_gogoslick +
+              ctx.files.well_known_protos +
+              ctx.files.well_known_gogoprotos)
 
     m_exports = []
     outputs = []
@@ -84,7 +96,7 @@ def _proto_gen_impl(ctx):
 
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
-        "--go_out=%s%s:%s" % (plugins, ",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
+        "--gogofast_out=%s%s:%s" % (plugins, ",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     cmd = protoc_cmd + ";" + ";".join(rename_cmds)
@@ -93,7 +105,12 @@ def _proto_gen_impl(ctx):
         outputs = outputs,
         command = cmd,
         env = {
-            "PATH": ctx.files.protoc_gen_go[0].dirname + ":/bin",
+            "PATH": ":".join([
+                ctx.files.protoc_gen_gogofast[0].dirname,
+                ctx.files.protoc_gen_gogofaster[0].dirname,
+                ctx.files.protoc_gen_gogoslick[0].dirname,
+                "/bin",
+            ])
         },
     )
 
@@ -104,8 +121,18 @@ def _proto_gen_impl(ctx):
 
 _proto_gen = rule(
     attrs = _common_attrs + {
-        "protoc_gen_go": attr.label(
-            default = Label("@com_github_golang_protobuf//protoc-gen-go"),
+        "protoc_gen_gogofast": attr.label(
+            default = Label("@com_github_gogo_protobuf//protoc-gen-gogofast"),
+            allow_files = True,
+            cfg = "host",
+        ),
+        "protoc_gen_gogofaster": attr.label(
+            default = Label("@com_github_gogo_protobuf//protoc-gen-gogofaster"),
+            allow_files = True,
+            cfg = "host",
+        ),
+        "protoc_gen_gogoslick": attr.label(
+            default = Label("@com_github_gogo_protobuf//protoc-gen-gogoslick"),
             allow_files = True,
             cfg = "host",
         ),
@@ -132,6 +159,7 @@ def _grpc_gateway_gen_impl(ctx):
     proto_paths = dict()
     proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
     proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
+    proto_paths[_safe_proto_path(ctx.attr.well_known_gogoprotos.label.workspace_root)] = None
 
     m_imports = []
     dep_protos = []
@@ -148,7 +176,8 @@ def _grpc_gateway_gen_impl(ctx):
               dep_protos +
               [ctx.executable.protoc] +
               ctx.files.protoc_gen_grpc_gateway +
-              ctx.files.well_known_protos)
+              ctx.files.well_known_protos +
+              ctx.files.well_known_gogoprotos)
 
     outputs = []
     for src in ctx.files.srcs:
@@ -186,6 +215,7 @@ def _swagger_gen_impl(ctx):
     proto_paths = dict()
     proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
     proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
+    proto_paths[_safe_proto_path(ctx.attr.well_known_gogoprotos.label.workspace_root)] = None
 
     m_imports = []
     dep_protos = []
@@ -202,7 +232,8 @@ def _swagger_gen_impl(ctx):
               dep_protos +
               [ctx.executable.protoc] +
               ctx.files.protoc_gen_swagger +
-              ctx.files.well_known_protos)
+              ctx.files.well_known_protos +
+              ctx.files.well_known_gogoprotos)
 
     outputs = []
     for src in ctx.files.srcs:
@@ -318,6 +349,7 @@ def go_proto_library(
         importpath = None,
         package = None,
         deps = None,
+        pure_go_deps = None,
         visibility = None,
         with_grpc = False,
         with_gateway = False,
@@ -328,6 +360,9 @@ def go_proto_library(
         fail("srcs required", "srcs")
     if not deps:
         deps = []
+
+    if not pure_go_deps:
+        pure_go_deps = []
 
     proto_deps = [dep + "_proto" for dep in deps]
 
@@ -348,7 +383,7 @@ def go_proto_library(
 
     lib_srcs = [":" + proto_name]
 
-    full_deps = deps + WELL_KNOWN_DEPS
+    full_deps = deps + pure_go_deps + WELL_KNOWN_DEPS
 
     if with_grpc or with_gateway:
         full_deps += [
@@ -417,6 +452,7 @@ def go_proto_library(
 _go_grpc_repositories = {
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
+    "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/google/protobuf":             "6699f2cf64c656d96f4d6f93fa9563faf02e94b4",
     "github.com/grpc-ecosystem/grpc-gateway": "f2862b476edcef83412c7af8687c9cd8e4097c0f",
     "github.com/jteeuwen/go-bindata":         "a0ff2567cfb70903282db057e799fd826784d41d",
