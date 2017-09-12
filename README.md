@@ -18,9 +18,9 @@ git_repository(
     commit = "9012b95628c7eb762e7dbd61be93f46ad20b9370", # or more recent git sha1
 )
 
-load("@com_github_tnarg_rules_gogo_proto//go_proto:rules.bzl", "gogo_repositories")
+load("@com_github_tnarg_rules_gogo_proto//go_proto:rules.bzl", "gogo_protobuf_repositories")
 
-gogo_repositories()
+gogo_protobuf_repositories()
 ```
 
 Then in a directory containing one or more .proto files

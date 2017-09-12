@@ -457,7 +457,7 @@ def gogo_proto_library(
         visibility = visibility,
     )
 
-_gogo_repositories = {
+_gogo_protobuf_repositories = {
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
     "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
@@ -470,8 +470,8 @@ _gogo_repositories = {
     "google.golang.org/grpc":                 "7db1564ba1229bc42919bb1f6d9c4186f3aa8678",
 }
 
-def gogo_repositories():
-    for importpath, commit in _gogo_repositories.items():
+def gogo_protobuf_repositories():
+    for importpath, commit in _gogo_protobuf_repositories.items():
         _maybe_go_repository(importpath, commit)
 
 def _go_repository_name(importpath):
