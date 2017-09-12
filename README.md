@@ -15,7 +15,7 @@ In your workspace
 git_repository(
     name = "com_github_tnarg_rules_gogo_proto",
     remote = "https://github.com/tnarg/rules_gogo_proto.git",
-    commit = "9012b95628c7eb762e7dbd61be93f46ad20b9370", # or more recent git sha1
+    commit = "b79929c43e79960ee7484dcf31ccf6f6b11049dc", # or more recent git sha1
 )
 
 load("@com_github_tnarg_rules_gogo_proto//go_proto:rules.bzl", "gogo_protobuf_repositories")
