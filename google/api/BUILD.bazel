@@ -17,8 +17,8 @@ gogo_proto_library(
         "annotations.proto",
         "http.proto",
     ],
-    deps = [
-        "@com_github_tnarg_rules_gogo_proto//google/protobuf:go_default_library"
+    pure_go_deps = [
+        "@com_github_golang_protobuf//protoc-gen-go/descriptor:go_default_library",
     ],
     visibility = ["//visibility:public"],
 )
