@@ -16,14 +16,19 @@ _common_attrs = {
     "well_known_protos": attr.label(
         default = Label("@com_github_google_protobuf//:well_known_protos")
     ),
-    "well_known_gogoprotos": attr.label(
+    "gogo_protos": attr.label(
         default = Label("//:gogoproto/gogo.proto"),
+        allow_files = True,
+    ),
+    "govalidator_protos": attr.label(
+        default = Label("//:github.com/mwitkow/go-proto-validators/validator.proto"),
         allow_files = True,
     ),
     "outs": attr.output_list(mandatory = True),
 }
 
 WELL_KNOWN_DEPS = [
+    "@com_github_mwitkow_go_proto_validators//:go_default_library",
     "@com_github_gogo_protobuf//gogoproto:go_default_library",
     "@com_github_gogo_protobuf//proto:go_default_library",
     "@com_github_gogo_protobuf//types:go_default_library",
@@ -53,12 +58,11 @@ def _safe_proto_path(proto_path):
         return proto_path
 
 def _proto_gen_impl(ctx):
-    plugins = "plugins=grpc," if ctx.attr.with_grpc else ""
-
     proto_paths = dict()
     proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
     proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
-    proto_paths[_safe_proto_path(ctx.attr.well_known_gogoprotos.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.gogo_protos.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.govalidator_protos.label.workspace_root)] = None
 
     m_imports = []
     dep_protos = []
@@ -77,8 +81,10 @@ def _proto_gen_impl(ctx):
               ctx.files.protoc_gen_gogofast +
               ctx.files.protoc_gen_gogofaster +
               ctx.files.protoc_gen_gogoslick +
+              ctx.files.protoc_gen_govalidators +
               ctx.files.well_known_protos +
-              ctx.files.well_known_gogoprotos)
+              ctx.files.gogo_protos +
+              ctx.files.govalidator_protos)
 
     m_exports = []
     outputs = []
@@ -88,15 +94,30 @@ def _proto_gen_impl(ctx):
         out = ctx.new_file(ctx.genfiles_dir, fname)
         outputs += [out]
 
+        validator_fname = ""
+        validator_out = None
+        if ctx.attr.with_validators:
+            validator_fname = src.basename[:-len(".proto")] + ".validator.pb.go"
+            validator_out = ctx.new_file(ctx.genfiles_dir, validator_fname)
+            outputs += [validator_out]
+
         if ctx.attr.importpath:
             rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, fname, out.path)]
+            if ctx.attr.with_validators:
+                rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, validator_fname, validator_out.path)]
+
             m_exports += ["M%s=%s" % (src.path, ctx.attr.importpath)]
         else:
             m_exports += ["M%s=%s/%s" % (src.path, ctx.attr.go_prefix.go_prefix, src.dirname)]
 
+    plugins = "plugins=grpc," if ctx.attr.with_grpc else ""
+    full_m_imports = ",".join(WELL_KNOWN_M_IMPORTS + m_imports)
+    validators = "--govalidators_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_validators else ""
+
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
-        "--gogo%s_out=%s%s:%s" % (ctx.attr.mode, plugins, ",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
+        "--gogo%s_out=%s%s:%s" % (ctx.attr.mode, plugins, full_m_imports, ctx.genfiles_dir.path,),
+        validators,
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     cmd = protoc_cmd + ";" + ";".join(rename_cmds)
@@ -109,6 +130,7 @@ def _proto_gen_impl(ctx):
                 ctx.files.protoc_gen_gogofast[0].dirname,
                 ctx.files.protoc_gen_gogofaster[0].dirname,
                 ctx.files.protoc_gen_gogoslick[0].dirname,
+                ctx.files.protoc_gen_govalidators[0].dirname,
                 "/bin",
             ])
         },
@@ -140,7 +162,16 @@ _proto_gen = rule(
             allow_files = True,
             cfg = "host",
         ),
+        "protoc_gen_govalidators": attr.label(
+            default = Label("@com_github_mwitkow_go_proto_validators//protoc-gen-govalidators"),
+            allow_files = True,
+            cfg = "host",
+        ),
         "with_grpc": attr.bool(
+            default = False,
+            mandatory = True,
+        ),
+        "with_validators": attr.bool(
             default = False,
             mandatory = True,
         ),
@@ -163,7 +194,8 @@ def _grpc_gateway_gen_impl(ctx):
     proto_paths = dict()
     proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
     proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
-    proto_paths[_safe_proto_path(ctx.attr.well_known_gogoprotos.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.gogo_protos.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.govalidator_protos.label.workspace_root)] = None
 
     m_imports = []
     dep_protos = []
@@ -181,7 +213,8 @@ def _grpc_gateway_gen_impl(ctx):
               [ctx.executable.protoc] +
               ctx.files.protoc_gen_grpc_gateway +
               ctx.files.well_known_protos +
-              ctx.files.well_known_gogoprotos)
+              ctx.files.gogo_protos +
+              ctx.files.govalidator_protos)
 
     outputs = []
     for src in ctx.files.srcs:
@@ -219,7 +252,8 @@ def _swagger_gen_impl(ctx):
     proto_paths = dict()
     proto_paths[_safe_proto_path(ctx.label.workspace_root)] = None
     proto_paths[_safe_proto_path(ctx.attr.well_known_protos.label.workspace_root) + "/src"] = None
-    proto_paths[_safe_proto_path(ctx.attr.well_known_gogoprotos.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.gogo_protos.label.workspace_root)] = None
+    proto_paths[_safe_proto_path(ctx.attr.govalidator_protos.label.workspace_root)] = None
 
     m_imports = []
     dep_protos = []
@@ -237,7 +271,8 @@ def _swagger_gen_impl(ctx):
               [ctx.executable.protoc] +
               ctx.files.protoc_gen_swagger +
               ctx.files.well_known_protos +
-              ctx.files.well_known_gogoprotos)
+              ctx.files.gogo_protos +
+              ctx.files.govalidator_protos)
 
     outputs = []
     for src in ctx.files.srcs:
@@ -357,6 +392,7 @@ def gogo_proto_library(
         pure_go_deps = None,
         visibility = None,
         with_grpc = False,
+        with_validators = False,
         with_gateway = False,
         with_swagger = False):
     if not name:
@@ -377,6 +413,9 @@ def gogo_proto_library(
     proto_outs = [s[:-len(".proto")] + ".pb.go"
                   for s in srcs]
 
+    if with_validators:
+        proto_outs += [s[:-len(".proto")] + ".validator.pb.go" for s in srcs]
+
     proto_name = name + "_proto"
     _proto_gen(
         name = proto_name,
@@ -386,6 +425,7 @@ def gogo_proto_library(
         importpath = importpath,
         outs = proto_outs,
         with_grpc = with_grpc or with_gateway,
+        with_validators = with_validators,
         visibility = visibility,
     )
 
@@ -458,12 +498,13 @@ def gogo_proto_library(
     )
 
 _gogo_protobuf_repositories = {
+    "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
-    "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/google/protobuf":             "6699f2cf64c656d96f4d6f93fa9563faf02e94b4",
     "github.com/grpc-ecosystem/grpc-gateway": "f2862b476edcef83412c7af8687c9cd8e4097c0f",
     "github.com/jteeuwen/go-bindata":         "a0ff2567cfb70903282db057e799fd826784d41d",
+    "github.com/mwitkow/go-proto-validators": "a55ca57f374a8846924b030f534d8b8211508cf0",
     "golang.org/x/net":                       "5961165da77ad3a2abf3a77ea904c13a76b0b073",
     "golang.org/x/text":                      "e113a52b01bdd1744681b6ce70c2e3d26b58d389",
     "google.golang.org/genproto":             "411e09b969b1170a9f0c467558eb4c4c110d9c77",

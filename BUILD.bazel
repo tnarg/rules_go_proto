@@ -2,4 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_prefix")
 
 go_prefix("github.com/tnarg/rules_gogo_proto")
 
-exports_files(["gogoproto/gogo.proto"])
+exports_files([
+    "gogoproto/gogo.proto",
+    "github.com/mwitkow/go-proto-validators/validator.proto",
+])
