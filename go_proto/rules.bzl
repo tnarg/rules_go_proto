@@ -78,6 +78,7 @@ def _proto_gen_impl(ctx):
     inputs = (ctx.files.srcs +
               dep_protos +
               [ctx.executable.protoc] +
+              ctx.files.protoc_gen_go +
               ctx.files.protoc_gen_gogofast +
               ctx.files.protoc_gen_gogofaster +
               ctx.files.protoc_gen_gogoslick +
@@ -114,9 +115,11 @@ def _proto_gen_impl(ctx):
     full_m_imports = ",".join(WELL_KNOWN_M_IMPORTS + m_imports)
     validators = "--govalidators_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_validators else ""
 
+
+    generator = "gogo%s" % (ctx.attr.mode,) if ctx.attr.mode else "go"
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
-        "--gogo%s_out=%s%s:%s" % (ctx.attr.mode, plugins, full_m_imports, ctx.genfiles_dir.path,),
+        "--%s_out=%s%s:%s" % (generator, plugins, full_m_imports, ctx.genfiles_dir.path,),
         validators,
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
@@ -127,6 +130,7 @@ def _proto_gen_impl(ctx):
         command = cmd,
         env = {
             "PATH": ":".join([
+                ctx.files.protoc_gen_go[0].dirname,
                 ctx.files.protoc_gen_gogofast[0].dirname,
                 ctx.files.protoc_gen_gogofaster[0].dirname,
                 ctx.files.protoc_gen_gogoslick[0].dirname,
@@ -144,8 +148,12 @@ def _proto_gen_impl(ctx):
 _proto_gen = rule(
     attrs = _common_attrs + {
         "mode": attr.string(
-            default = "fast",
-            mandatory = True,
+            mandatory = False,
+        ),
+        "protoc_gen_go": attr.label(
+            default = Label("@com_github_golang_protobuf//protoc-gen-go"),
+            allow_files = True,
+            cfg = "host",
         ),
         "protoc_gen_gogofast": attr.label(
             default = Label("@com_github_gogo_protobuf//protoc-gen-gogofast"),
@@ -384,7 +392,7 @@ _bindata_gen = rule(
 
 def gogo_proto_library(
         name,
-        mode = "fast",
+        mode = None,
         srcs = None,
         importpath = None,
         package = None,
@@ -397,7 +405,7 @@ def gogo_proto_library(
         with_swagger = False):
     if not name:
         fail("name is required", "name")
-    if mode not in ["fast", "faster", "slick"]:
+    if mode and mode not in ["fast", "faster", "slick"]:
         fail("mode must be \"fast\", \"faster\", or \"slick\"", "mode")
     if not srcs:
         fail("srcs required", "srcs")
