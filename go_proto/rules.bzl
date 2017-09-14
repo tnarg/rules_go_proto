@@ -32,23 +32,16 @@ WELL_KNOWN_DEPS = [
     "@com_github_gogo_protobuf//gogoproto:go_default_library",
     "@com_github_gogo_protobuf//proto:go_default_library",
     "@com_github_gogo_protobuf//types:go_default_library",
-    "@com_github_golang_protobuf//proto:go_default_library",
-    "@com_github_golang_protobuf//ptypes/any:go_default_library",
-    "@com_github_golang_protobuf//ptypes/duration:go_default_library",
-    "@com_github_golang_protobuf//ptypes/empty:go_default_library",
-    "@com_github_golang_protobuf//ptypes/struct:go_default_library",
-    "@com_github_golang_protobuf//ptypes/timestamp:go_default_library",
-    "@com_github_golang_protobuf//ptypes/wrappers:go_default_library",
 ]
 
 WELL_KNOWN_M_IMPORTS = [
     "Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto",
-    "Mgoogle/protobuf/any.proto=github.com/golang/protobuf/ptypes/any",
-    "Mgoogle/protobuf/duration.proto=github.com/golang/protobuf/ptypes/duration",
-    "Mgoogle/protobuf/empty.proto=github.com/golang/protobuf/ptypes/empty",
-    "Mgoogle/protobuf/struct.proto=github.com/golang/protobuf/ptypes/struct",
-    "Mgoogle/protobuf/timestamp.proto=github.com/golang/protobuf/ptypes/timestamp",
-    "Mgoogle/protobuf/wrappers.proto=github.com/golang/protobuf/ptypes/wrappers",
+    "Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types",
+    "Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types",
+    "Mgoogle/protobuf/empty.proto=github.com/gogo/protobuf/types",
+    "Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types",
+    "Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types",
+    "Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types",
 ]
 
 def _safe_proto_path(proto_path):
@@ -502,16 +495,32 @@ _gogo_protobuf_repositories = {
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
     "github.com/google/protobuf":             "6699f2cf64c656d96f4d6f93fa9563faf02e94b4",
-    "github.com/grpc-ecosystem/grpc-gateway": "f2862b476edcef83412c7af8687c9cd8e4097c0f",
+    #"github.com/grpc-ecosystem/grpc-gateway": "f2862b476edcef83412c7af8687c9cd8e4097c0f",
     "github.com/jteeuwen/go-bindata":         "a0ff2567cfb70903282db057e799fd826784d41d",
     "github.com/mwitkow/go-proto-validators": "a55ca57f374a8846924b030f534d8b8211508cf0",
     "golang.org/x/net":                       "5961165da77ad3a2abf3a77ea904c13a76b0b073",
     "golang.org/x/text":                      "e113a52b01bdd1744681b6ce70c2e3d26b58d389",
-    "google.golang.org/genproto":             "411e09b969b1170a9f0c467558eb4c4c110d9c77",
+    #"google.golang.org/genproto":             "411e09b969b1170a9f0c467558eb4c4c110d9c77",
     "google.golang.org/grpc":                 "7db1564ba1229bc42919bb1f6d9c4186f3aa8678",
 }
 
 def gogo_protobuf_repositories():
+    go_repository(
+        name = "com_github_grpc_ecosystem_grpc_gateway",
+        importpath = "github.com/grpc-ecosystem/grpc-gateway",
+        commit = "edf96275ee80a3cb5dfbe374ca8528a35ca918e0", #"f2862b476edcef83412c7af8687c9cd8e4097c0f",
+        vcs = "git",
+        remote = "https://github.com/tnarg/grpc-gateway.git",
+    )
+
+    go_repository(
+        name = "org_golang_google_genproto",
+        importpath = "google.golang.org/genproto",
+        commit = "d834965d6a0bad4af5d50b090a21cdefe284a623",
+        vcs = "git",
+        remote = "https://github.com/tnarg/go-genproto.git",
+    )
+
     for importpath, commit in _gogo_protobuf_repositories.items():
         _maybe_go_repository(importpath, commit)
 
