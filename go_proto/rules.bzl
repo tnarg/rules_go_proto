@@ -314,8 +314,7 @@ _swagger_gen = rule(
     implementation = _swagger_gen_impl,
 )
 
-def _bindata_impl(ctx):
-
+def _redoc_impl(ctx):
     index_entries = []
     redoc_pages = []
     for src in ctx.files.srcs:
@@ -340,11 +339,7 @@ def _bindata_impl(ctx):
         },
     )
 
-    if ctx.attr.package:
-        pkg = ctx.attr.package
-    else:
-        pkg = "_".join(ctx.label.package.split("/"))
-
+    pkg = ctx.attr.package if ctx.attr.package else "_".join(ctx.label.package.split("/"))
     inputs = ctx.files.srcs + redoc_pages + [index, ctx.executable.bindata]
     ctx.action(
         inputs = inputs,
@@ -358,7 +353,7 @@ def _bindata_impl(ctx):
         ),
     )
 
-_bindata_gen = rule(
+_redoc_gen = rule(
     attrs = {
         "srcs": attr.label_list(
             mandatory = True,
@@ -380,6 +375,44 @@ _bindata_gen = rule(
             default = Label("//go_proto:index.tpl"),
             allow_files=True,
             single_file=True,
+        ),
+        "package": attr.string(),
+    },
+    output_to_genfiles = True,
+    outputs = {
+        "bindata": "%{name}.go"
+    },
+    implementation = _redoc_impl,
+)
+
+def _bindata_impl(ctx):
+    pkg = ctx.attr.package if ctx.attr.package else ctx.label.package.split("/")[-1]
+
+    inputs = ctx.files.srcs + [ctx.executable.bindata]
+    ctx.action(
+        inputs = inputs,
+        outputs = [ctx.outputs.bindata],
+        command = "%s -pkg %s -prefix %s -o %s %s" % (
+            ctx.executable.bindata.path,
+            pkg,
+            "%s/%s" % (ctx.genfiles_dir.path, ctx.label.package),
+            ctx.outputs.bindata.path,
+            " ".join([src.path for src in ctx.files.srcs]),
+        ),
+    )
+
+_bindata_gen = rule(
+    attrs = {
+        "srcs": attr.label_list(
+            mandatory = True,
+            allow_files = True,
+        ),
+        "bindata": attr.label(
+            default = Label("@com_github_jteeuwen_go_bindata//go-bindata"),
+            executable = True,
+            single_file = True,
+            allow_files = True,
+            cfg = "host",
         ),
         "package": attr.string(),
     },
@@ -487,20 +520,44 @@ def gogo_proto_library(
             outs = swagger_outs,
         )
 
-        bindata_outs = [s[:-len(".proto")] + ".swagger.go"
+        redoc_outs = [s[:-len(".proto")] + ".swagger.go"
               for s in srcs]
-        bindata_name = name + "_swagger_bindata"
-        _bindata_gen(
-            name = bindata_name,
+        redoc_name = name + "_swagger_redoc"
+        _redoc_gen(
+            name = redoc_name,
             srcs = [":" + swagger_name],
             package = package,
         )
-        lib_srcs += [":" + bindata_name]
+        lib_srcs += [":" + redoc_name]
 
     go_library(
         name = name,
         srcs = lib_srcs,
         deps = full_deps,
+        importpath = importpath,
+        visibility = visibility,
+    )
+
+def gogo_bindata_library(
+        name,
+        srcs = None,
+        importpath = None,
+        package = None,
+        visibility = None):
+    if not name:
+        fail("name is required", "name")
+    if not srcs:
+        fail("srcs required", "srcs")
+
+    _bindata_gen(
+        name = name + "_bindata",
+        srcs = srcs,
+        package = package,
+    )
+
+    go_library(
+        name = name,
+        srcs = [":" + name + "_bindata"],
         importpath = importpath,
         visibility = visibility,
     )
