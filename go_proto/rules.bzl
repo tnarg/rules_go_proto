@@ -395,7 +395,7 @@ def _bindata_impl(ctx):
         command = "%s -pkg %s -prefix %s -o %s %s" % (
             ctx.executable.bindata.path,
             pkg,
-            "%s/%s" % (ctx.genfiles_dir.path, ctx.label.package),
+            ctx.label.package,
             ctx.outputs.bindata.path,
             " ".join([src.path for src in ctx.files.srcs]),
         ),
