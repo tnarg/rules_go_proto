@@ -83,6 +83,7 @@ def _proto_gen_impl(ctx):
               ctx.files.protoc_gen_gogofaster +
               ctx.files.protoc_gen_gogoslick +
               ctx.files.protoc_gen_govalidators +
+              ctx.files.protoc_gen_letmegrpc +
               ctx.files.well_known_protos +
               ctx.files.gogo_protos +
               ctx.files.govalidator_protos)
@@ -102,10 +103,19 @@ def _proto_gen_impl(ctx):
             validator_out = ctx.new_file(ctx.genfiles_dir, validator_fname)
             outputs += [validator_out]
 
+        letmegrpc_fname = ""
+        letmegrpc_out = None
+        if ctx.attr.with_rpc_forms:
+            letmegrpc_fname = src.basename[:-len(".proto")] + ".letmegrpc.go"
+            letmegrpc_out = ctx.new_file(ctx.genfiles_dir, letmegrpc_fname)
+            outputs += [letmegrpc_out]
+
         if ctx.attr.importpath:
             rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, fname, out.path)]
             if ctx.attr.with_validators:
                 rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, validator_fname, validator_out.path)]
+            if ctx.attr.with_rpc_forms:
+                rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, letmegrpc_fname, letmegrpc_out.path)]
 
             m_exports += ["M%s=%s" % (src.path, ctx.attr.importpath)]
         else:
@@ -114,13 +124,14 @@ def _proto_gen_impl(ctx):
     plugins = "plugins=grpc," if ctx.attr.with_grpc else ""
     full_m_imports = ",".join(WELL_KNOWN_M_IMPORTS + m_imports)
     validators = "--govalidators_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_validators else ""
-
+    letmegrpc = "--letmegrpc_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_rpc_forms else ""
 
     generator = "gogo%s" % (ctx.attr.mode,) if ctx.attr.mode else "go"
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
         "--%s_out=%s%s:%s" % (generator, plugins, full_m_imports, ctx.genfiles_dir.path,),
         validators,
+        letmegrpc,
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     cmd = protoc_cmd + ";" + ";".join(rename_cmds)
@@ -135,6 +146,7 @@ def _proto_gen_impl(ctx):
                 ctx.files.protoc_gen_gogofaster[0].dirname,
                 ctx.files.protoc_gen_gogoslick[0].dirname,
                 ctx.files.protoc_gen_govalidators[0].dirname,
+                ctx.files.protoc_gen_letmegrpc[0].dirname,
                 "/bin",
             ])
         },
@@ -175,11 +187,20 @@ _proto_gen = rule(
             allow_files = True,
             cfg = "host",
         ),
+        "protoc_gen_letmegrpc": attr.label(
+            default = Label("@com_github_gogo_letmegrpc//protoc-gen-letmegrpc"),
+            allow_files = True,
+            cfg = "host",
+        ),
         "with_grpc": attr.bool(
             default = False,
             mandatory = True,
         ),
         "with_validators": attr.bool(
+            default = False,
+            mandatory = True,
+        ),
+        "with_rpc_forms": attr.bool(
             default = False,
             mandatory = True,
         ),
@@ -435,7 +456,8 @@ def gogo_proto_library(
         with_grpc = False,
         with_validators = False,
         with_gateway = False,
-        with_swagger = False):
+        with_swagger = False,
+        with_rpc_forms = False):
     if not name:
         fail("name is required", "name")
     if mode and mode not in ["fast", "faster", "slick"]:
@@ -465,8 +487,9 @@ def gogo_proto_library(
         deps = proto_deps,
         importpath = importpath,
         outs = proto_outs,
-        with_grpc = with_grpc or with_gateway,
+        with_grpc = with_grpc or with_gateway or with_rpc_forms,
         with_validators = with_validators,
+        with_rpc_forms = with_rpc_forms,
         visibility = visibility,
     )
 
@@ -563,6 +586,7 @@ def gogo_bindata_library(
     )
 
 _gogo_protobuf_repositories = {
+    "github.com/gogo/letmegrpc":              "40744febf48274d7a07f81fb6570668ed1c1491f",
     "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",

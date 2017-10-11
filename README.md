@@ -6,6 +6,7 @@ Supports
 * [gRPC](https://grpc.io/) code generation
 * [gRPC-Gateway](https://github.com/grpc-ecosystem/grpc-gateway) code generation with swagger
 * Swagger html docs
+* [letmegrpc](https://github.com/gogo/letmegrpc) grpc forms
 
 ## Usage
 
