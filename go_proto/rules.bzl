@@ -479,6 +479,9 @@ def gogo_proto_library(
     if with_validators:
         proto_outs += [s[:-len(".proto")] + ".validator.pb.go" for s in srcs]
 
+    if with_rpc_forms:
+        proto_outs += [s[:-len(".proto")] + ".letmegrpc.go" for s in srcs]
+
     proto_name = name + "_proto"
     _proto_gen(
         name = proto_name,
