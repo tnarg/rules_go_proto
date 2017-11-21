@@ -82,6 +82,7 @@ def _proto_gen_impl(ctx):
               ctx.files.protoc_gen_gogofast +
               ctx.files.protoc_gen_gogofaster +
               ctx.files.protoc_gen_gogoslick +
+              ctx.files.protoc_gen_go_jsonpb +
               ctx.files.protoc_gen_govalidators +
               ctx.files.protoc_gen_letmegrpc +
               ctx.files.well_known_protos +
@@ -95,6 +96,13 @@ def _proto_gen_impl(ctx):
         fname = src.basename[:-len(".proto")] + ".pb.go"
         out = ctx.new_file(ctx.genfiles_dir, fname)
         outputs += [out]
+
+        jsonpb_fname = ""
+        jsonpb_out = None
+        if ctx.attr.with_jsonpb:
+            jsonpb_fname = src.basename[:-len(".proto")] + ".pb.jsonpb.go"
+            jsonpb_out = ctx.new_file(ctx.genfiles_dir, jsonpb_fname)
+            outputs += [jsonpb_out]
 
         validator_fname = ""
         validator_out = None
@@ -123,6 +131,7 @@ def _proto_gen_impl(ctx):
 
     plugins = "plugins=grpc," if ctx.attr.with_grpc else ""
     full_m_imports = ",".join(WELL_KNOWN_M_IMPORTS + m_imports)
+    jsonpb = "--go-jsonpb_out=%s" % (ctx.genfiles_dir.path,) if ctx.attr.with_jsonpb else ""
     validators = "--govalidators_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_validators else ""
     letmegrpc = "--letmegrpc_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_rpc_forms else ""
 
@@ -130,6 +139,7 @@ def _proto_gen_impl(ctx):
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
         "--%s_out=%s%s:%s" % (generator, plugins, full_m_imports, ctx.genfiles_dir.path,),
+        jsonpb,
         validators,
         letmegrpc,
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
@@ -145,6 +155,7 @@ def _proto_gen_impl(ctx):
                 ctx.files.protoc_gen_gogofast[0].dirname,
                 ctx.files.protoc_gen_gogofaster[0].dirname,
                 ctx.files.protoc_gen_gogoslick[0].dirname,
+                ctx.files.protoc_gen_go_jsonpb[0].dirname,
                 ctx.files.protoc_gen_govalidators[0].dirname,
                 ctx.files.protoc_gen_letmegrpc[0].dirname,
                 "/bin",
@@ -182,6 +193,11 @@ _proto_gen = rule(
             allow_files = True,
             cfg = "host",
         ),
+        "protoc_gen_go_jsonpb": attr.label(
+            default = Label("@com_github_tnarg_protoc_go_plugins//protoc-gen-go-jsonpb"),
+            allow_files = True,
+            cfg = "host",
+        ),
         "protoc_gen_govalidators": attr.label(
             default = Label("@com_github_mwitkow_go_proto_validators//protoc-gen-govalidators"),
             allow_files = True,
@@ -193,6 +209,10 @@ _proto_gen = rule(
             cfg = "host",
         ),
         "with_grpc": attr.bool(
+            default = False,
+            mandatory = True,
+        ),
+        "with_jsonpb":  attr.bool(
             default = False,
             mandatory = True,
         ),
@@ -454,6 +474,7 @@ def gogo_proto_library(
         pure_go_deps = None,
         visibility = None,
         with_grpc = False,
+        with_jsonpb = False,
         with_validators = False,
         with_gateway = False,
         with_swagger = False,
@@ -476,6 +497,9 @@ def gogo_proto_library(
     proto_outs = [s[:-len(".proto")] + ".pb.go"
                   for s in srcs]
 
+    if with_jsonpb:
+        proto_outs += [s[:-len(".proto")] + ".pb.jsonpb.go" for s in srcs]
+
     if with_validators:
         proto_outs += [s[:-len(".proto")] + ".validator.pb.go" for s in srcs]
 
@@ -491,6 +515,7 @@ def gogo_proto_library(
         importpath = importpath,
         outs = proto_outs,
         with_grpc = with_grpc or with_gateway or with_rpc_forms,
+        with_jsonpb = with_jsonpb,
         with_validators = with_validators,
         with_rpc_forms = with_rpc_forms,
         visibility = visibility,
@@ -499,6 +524,9 @@ def gogo_proto_library(
     lib_srcs = [":" + proto_name]
 
     full_deps = deps + pure_go_deps + WELL_KNOWN_DEPS
+
+    if with_jsonpb:
+        full_deps += ["@com_github_golang_protobuf//jsonpb:go_default_library"]
 
     if with_grpc or with_gateway:
         full_deps += [
@@ -589,6 +617,7 @@ def gogo_bindata_library(
     )
 
 _gogo_protobuf_repositories = {
+    "github.com/tnarg/protoc-go-plugins":     "4de2aa7f190b25cfcf73dabdd0ec167d690f6f4b",
     "github.com/gogo/letmegrpc":              "40744febf48274d7a07f81fb6570668ed1c1491f",
     "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
