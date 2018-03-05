@@ -204,7 +204,7 @@ _proto_gen = rule(
             cfg = "host",
         ),
         "protoc_gen_letmegrpc": attr.label(
-            default = Label("@com_github_thevault_letmegrpc//protoc-gen-letmegrpc"),
+            default = Label("@com_github_gogo_letmegrpc//protoc-gen-letmegrpc"),
             allow_files = True,
             cfg = "host",
         ),
@@ -618,7 +618,7 @@ def gogo_bindata_library(
 
 _gogo_protobuf_repositories = {
     "github.com/tnarg/protoc-go-plugins":     "4de2aa7f190b25cfcf73dabdd0ec167d690f6f4b",
-    "github.com/thevault/letmegrpc":          "97f5105bd9ccedd9259d627464a1f01128e2c4ef",
+    "github.com/gogo/letmegrpc":              "de2024216b825ffeca23577fc2bf5356a4f527fb",
     "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
