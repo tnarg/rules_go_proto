@@ -88,6 +88,7 @@ def _proto_gen_impl(ctx):
               ctx.files.well_known_protos +
               ctx.files.gogo_protos +
               ctx.files.govalidator_protos)
+    outdir = '%s/%s' % (ctx.genfiles_dir.path, ctx.label.workspace_root)
 
     m_exports = []
     outputs = []
@@ -119,11 +120,11 @@ def _proto_gen_impl(ctx):
             outputs += [letmegrpc_out]
 
         if ctx.attr.importpath:
-            rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, fname, out.path)]
+            rename_cmds += ["mv %s/%s/%s %s" % (outdir, ctx.attr.importpath, fname, out.path)]
             if ctx.attr.with_validators:
-                rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, validator_fname, validator_out.path)]
+                rename_cmds += ["mv %s/%s/%s %s" % (outdir, ctx.attr.importpath, validator_fname, validator_out.path)]
             if ctx.attr.with_rpc_forms:
-                rename_cmds += ["mv %s/%s/%s %s" % (ctx.genfiles_dir.path, ctx.attr.importpath, letmegrpc_fname, letmegrpc_out.path)]
+                rename_cmds += ["mv %s/%s/%s %s" % (outdir, ctx.attr.importpath, letmegrpc_fname, letmegrpc_out.path)]
 
             m_exports += ["M%s=%s" % (src.path, ctx.attr.importpath)]
         else:
@@ -131,14 +132,14 @@ def _proto_gen_impl(ctx):
 
     plugins = "plugins=grpc," if ctx.attr.with_grpc else ""
     full_m_imports = ",".join(WELL_KNOWN_M_IMPORTS + m_imports)
-    jsonpb = "--go-jsonpb_out=%s" % (ctx.genfiles_dir.path,) if ctx.attr.with_jsonpb else ""
-    validators = "--govalidators_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_validators else ""
-    letmegrpc = "--letmegrpc_out=%s:%s" % (full_m_imports, ctx.genfiles_dir.path,) if ctx.attr.with_rpc_forms else ""
+    jsonpb = "--go-jsonpb_out=%s" % (outdir,) if ctx.attr.with_jsonpb else ""
+    validators = "--govalidators_out=%s:%s" % (full_m_imports, outdir,) if ctx.attr.with_validators else ""
+    letmegrpc = "--letmegrpc_out=%s:%s" % (full_m_imports, outdir,) if ctx.attr.with_rpc_forms else ""
 
     generator = "gogo%s" % (ctx.attr.mode,) if ctx.attr.mode else "go"
     protoc_cmd = " ".join([
         ctx.executable.protoc.path,
-        "--%s_out=%s%s:%s" % (generator, plugins, full_m_imports, ctx.genfiles_dir.path,),
+        "--%s_out=%s%s:%s" % (generator, plugins, full_m_imports, outdir,),
         jsonpb,
         validators,
         letmegrpc,
@@ -271,9 +272,10 @@ def _grpc_gateway_gen_impl(ctx):
         out = ctx.new_file(ctx.genfiles_dir, fname)
         outputs += [out]
 
+    outdir = '%s/%s' % (ctx.genfiles_dir.path, ctx.label.workspace_root)
     cmd = " ".join([
         ctx.executable.protoc.path,
-        "--grpc-gateway_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
+        "--grpc-gateway_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), outdir,),
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     ctx.action(
@@ -329,9 +331,10 @@ def _swagger_gen_impl(ctx):
         out = ctx.new_file(ctx.genfiles_dir, fname)
         outputs += [out]
 
+    outdir = '%s/%s' % (ctx.genfiles_dir.path, ctx.label.workspace_root)
     cmd = " ".join([
         ctx.executable.protoc.path,
-        "--swagger_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), ctx.genfiles_dir.path,),
+        "--swagger_out=%s:%s" % (",".join(WELL_KNOWN_M_IMPORTS + m_imports), outdir,),
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
     ctx.action(
