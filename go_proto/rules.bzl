@@ -528,6 +528,9 @@ def gogo_proto_library(
 
     full_deps = deps + pure_go_deps + WELL_KNOWN_DEPS
 
+    if with_rpc_forms:
+       full_deps += ["@org_golang_google_grpc//metadata:go_default_library"]
+
     if with_jsonpb:
         full_deps += ["@com_github_golang_protobuf//jsonpb:go_default_library"]
 
@@ -621,7 +624,7 @@ def gogo_bindata_library(
 
 _gogo_protobuf_repositories = {
     "github.com/tnarg/protoc-go-plugins":     "4de2aa7f190b25cfcf73dabdd0ec167d690f6f4b",
-    "github.com/gogo/letmegrpc":              "de2024216b825ffeca23577fc2bf5356a4f527fb",
+    #"github.com/gogo/letmegrpc":              "de2024216b825ffeca23577fc2bf5356a4f527fb",
     "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
     "github.com/golang/protobuf":             "83cd65fc365ace80eb6b6ecfc45203e43edfbc70",
@@ -638,6 +641,14 @@ _gogo_protobuf_repositories = {
 def gogo_protobuf_repositories():
     for importpath, commit in _gogo_protobuf_repositories.items():
         _maybe_go_repository(importpath, commit)
+
+    go_repository(
+        name=_go_repository_name("github.com/gogo/letmegrpc"),
+        importpath="github.com/gogo/letmegrpc",
+        remote="https://gitlab-master.nvidia.com/gmonroe/letmegrpc.git",
+        vcs="git",
+        commit="f202b4a2883eed96cbf2ecd0152212e6a30980f4",
+    )
 
 def _go_repository_name(importpath):
     a, b = importpath.split('/', 1)
