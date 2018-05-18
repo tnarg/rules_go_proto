@@ -145,7 +145,7 @@ def _proto_gen_impl(ctx):
         letmegrpc,
     ] + proto_path_args + [src.path for src in ctx.files.srcs])
 
-    cmd = protoc_cmd + ";" + ";".join(rename_cmds)
+    cmd = protoc_cmd + " && " + " && ".join(rename_cmds)
     ctx.action(
         inputs = inputs,
         outputs = outputs,
