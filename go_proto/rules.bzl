@@ -623,7 +623,7 @@ def gogo_bindata_library(
     )
 
 _gogo_protobuf_repositories = {
-    "github.com/tnarg/protoc-go-plugins":     "4de2aa7f190b25cfcf73dabdd0ec167d690f6f4b",
+    "github.com/tnarg/protoc-go-plugins":     "5e0db29783e94a21c45bee0258f19cf55c81b019",
     #"github.com/gogo/letmegrpc":              "de2024216b825ffeca23577fc2bf5356a4f527fb",
     "github.com/gogo/protobuf":               "2adc21fd136931e0388e278825291678e1d98309",
     "github.com/golang/glog":                 "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
