@@ -645,9 +645,9 @@ def gogo_protobuf_repositories():
     go_repository(
         name=_go_repository_name("github.com/gogo/letmegrpc"),
         importpath="github.com/gogo/letmegrpc",
-        remote="https://gitlab-master.nvidia.com/gmonroe/letmegrpc.git",
-        vcs="git",
-        commit="f202b4a2883eed96cbf2ecd0152212e6a30980f4",
+        urls = ["https://archives.nvda.ai/letmegrpc-f202b4a2883eed96cbf2ecd0152212e6a30980f4.tar.gz"],
+        sha256 = "c6a420915ab7cf02ae91a4ab7b07f34920ee6e59230ba19d3f48110218dda52e",
+        build_file_proto_mode="disable",
     )
 
 def _go_repository_name(importpath):
